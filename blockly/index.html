@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Line-Tracing Robot Blockly Editor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🤖 Line-Tracing Robot - Visual Programmer</h1>
+        <p>Drag and drop blocks to program your robot</p>
+      </div>
+
+      <div class="main-content">
+        <!-- Blockly Workspace -->
+        <div class="workspace-container">
+          <div id="blocklyDiv" class="blockly-workspace"></div>
+          <xml id="toolbox" style="display: none">
+            <!-- Structure Category -->
+            <category name="Structure" colour="#ffcc00">
+              <block type="arduino_setup"></block>
+              <block type="arduino_loop"></block>
+            </category>
+
+            <!-- Robot Control Category -->
+            <category name="Robot Control" colour="#0099cc">
+              <block type="robot_forward"></block>
+              <block type="robot_backward"></block>
+              <block type="robot_turn_left"></block>
+              <block type="robot_turn_right"></block>
+              <block type="robot_stop"></block>
+            </category>
+
+            <!-- Motor Control Category -->
+            <category name="Motors" colour="#0066cc">
+              <block type="set_motor_speed"></block>
+              <block type="set_left_motor"></block>
+              <block type="set_right_motor"></block>
+            </category>
+
+            <!-- Sensor Category -->
+            <category name="Sensors" colour="#ff6600">
+              <block type="read_sensors"></block>
+              <block type="get_sensor_value"></block>
+              <block type="line_detected"></block>
+            </category>
+
+            <!-- Logic Category -->
+            <category name="Logic" colour="#ff6b6b">
+              <block type="controls_if"></block>
+              <block type="logic_compare"></block>
+              <block type="logic_operation"></block>
+            </category>
+
+            <!-- Loops Category -->
+            <category name="Loops" colour="#ffaa00">
+              <block type="controls_repeat_ext"></block>
+              <block type="controls_whileUntil"></block>
+            </category>
+
+            <!-- Variables Category -->
+            <category
+              name="Variables"
+              colour="#a64d79"
+              custom="VARIABLE"
+            ></category>
+
+            <!-- Math Category -->
+            <category name="Math" colour="#cc99ff">
+              <block type="math_number"></block>
+              <block type="math_arithmetic"></block>
+            </category>
+
+            <!-- Text Category -->
+            <category name="Text" colour="#999999">
+              <block type="text"></block>
+              <block type="text_print"></block>
+            </category>
+
+            <!-- Debug & I/O Category -->
+            <category name="Debug & I/O" colour="#ff6600">
+              <block type="serial_print_line"></block>
+              <block type="serial_print_number"></block>
+              <block type="serial_delay"></block>
+              <block type="debug_all_sensors"></block>
+              <block type="debug_sensor"></block>
+              <block type="debug_position"></block>
+              <block type="motor_info"></block>
+              <block type="output_status"></block>
+            </category>
+          </xml>
+        </div>
+
+        <!-- Code Panel -->
+        <div class="code-panel">
+          <div class="panel-header">
+            <h3>Generated Arduino Code</h3>
+            <button id="copyBtn" class="btn-primary">📋 Copy Code</button>
+          </div>
+          <div class="code-controls">
+            <button id="generateBtn" class="btn-secondary">
+              ⚡ Generate Code
+            </button>
+            <button id="clearBtn" class="btn-secondary">🗑️ Clear Blocks</button>
+            <button id="downloadBtn" class="btn-secondary">⬇️ Download</button>
+            <button id="exportBtn" class="btn-success">
+              🚀 Export to Arduino
+            </button>
+          </div>
+          <pre id="codeOutput" class="code-output"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blockly CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/blockly@10.3.0/blockly_compressed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@10.3.0/blocks_compressed.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@10.3.0/en.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/blockly@10.3.0/javascript_compressed.js"></script>
+
+    <!-- Custom blocks and generator -->
+    <script src="blocks.js"></script>
+    <script src="generator.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

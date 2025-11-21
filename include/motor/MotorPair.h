@@ -20,13 +20,13 @@ public:
     inline void setLeftMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
     {
         leftMotor = Motor(pwm, pin1, pin2, inverted);
-        leftMotor.motorInit();
+        left().motorInit();
     }
 
     inline void setRightMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
     {
         rightMotor = Motor(pwm, pin1, pin2, inverted);
-        rightMotor.motorInit();
+        getRightMotor().motorInit();
     }
 
     inline void setSTBYPin(uint8_t stby)
@@ -43,6 +43,10 @@ public:
     inline Motor &left() { return leftMotor; }
 
     /// @brief returns a reference to internal right motor.
+    /// @return
+    inline Motor &right() { return rightMotor; }
+    
+    /// @brief returns a reference to internal right motor (deprecated, use right() instead).
     /// @return
     inline Motor &getRightMotor() { return rightMotor; }
 
