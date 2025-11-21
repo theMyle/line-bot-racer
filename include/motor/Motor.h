@@ -13,18 +13,8 @@ private:
     bool _inverted;
 
 public:
-    /**
-     * Construct a Motor object.
-     *
-     * @param pwm       PWM pin number (analog output) used to control motor speed.
-     * @param pin1      Direction control pin 1.
-     * @param pin2      Direction control pin 2.
-     * @param inverted  If true, the motor's direction is inverted (forward/backward swapped).
-     */
     Motor(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
-        : _pwm(pwm), _in1(pin1), _in2(pin2), _inverted(inverted)
-    {
-    }
+        : _pwm(pwm), _in1(pin1), _in2(pin2), _inverted(inverted) {}
 
     inline void motorInit()
     {

@@ -8,21 +8,45 @@
 class MotorPair
 {
 private:
-    Motor &leftMotor;
-    Motor &rightMotor;
     uint8_t STBY;
+    Motor leftMotor;
+    Motor rightMotor;
 
 public:
-    MotorPair(Motor &leftMotor, Motor &rightMotor, uint8_t STBY_PIN) : leftMotor(leftMotor), rightMotor(rightMotor), STBY(STBY_PIN) {}
+    // Constructor
+    MotorPair();
 
-    inline void initMotors()
+    // SETTERS
+    inline void setLeftMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
     {
+        leftMotor = Motor(pwm, pin1, pin2, inverted);
         leftMotor.motorInit();
+    }
+
+    inline void setRightMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
+    {
+        rightMotor = Motor(pwm, pin1, pin2, inverted);
         rightMotor.motorInit();
+    }
+
+    inline void setSTBYPin(uint8_t stby)
+    {
+        STBY = stby;
         pinMode(STBY, OUTPUT);
         digitalWrite(STBY, HIGH);
-    };
+    }
 
+    // GETTERS
+
+    /// @brief returns a reference to internal left motor.
+    /// @return
+    inline Motor &left() { return leftMotor; }
+
+    /// @brief returns a reference to internal right motor.
+    /// @return
+    inline Motor &getRightMotor() { return rightMotor; }
+
+    // MOVEMENT FUNCTIONS
     inline void forward(uint8_t speed)
     {
         leftMotor.forward(speed);

@@ -4,14 +4,51 @@
 #include <motor/MotorPair.h>
 #include <HardwareMapping.h>
 
+// sensor declarations
 QTRSensors qtr;
 uint16_t sensorValues[SENSOR_COUNT];
 
-Motor motorLeft = Motor(MOTOR_A_PWM, MOTOR_A_PIN_IN1, MOTOR_A_PIN_IN2, 0);
-Motor motorRight = Motor(MOTOR_B_PWM, MOTOR_B_PIN_IN1, MOTOR_B_PIN_IN2, 1);
-MotorPair motorPair = MotorPair(motorLeft, motorRight, STBY_PIN);
+// motor declaration
+MotorPair motors;
 
-uint16_t SENSOR_THRESHHOLD = 300;
+// other vars
+uint16_t SENSOR_NOISE_THRESHHOLD = 300;
+
+void calibrateSensors(uint8_t steps);
+void normalizeSensorValues(uint16_t *sensorValues, uint8_t size, uint16_t noiseThreshhold);
+
+void setup()
+{
+  Serial.begin(9600);
+
+  // motor initialization
+  motors.setLeftMotorPins(MOTOR_A_PWM, MOTOR_A_PIN_IN1, MOTOR_A_PIN_IN2, 0);
+  motors.setRightMotorPins(MOTOR_B_PWM, MOTOR_B_PIN_IN1, MOTOR_B_PIN_IN2, 1);
+  motors.setSTBYPin(STBY_PIN);
+
+  // sensor initialization
+  qtr.setTypeRC(); // digital
+  qtr.setSensorPins(SENSOR_PINS, SENSOR_COUNT);
+  qtr.setEmitterPin(IR_PIN);
+  // calibrateSensors(150);
+
+  // other stuff
+}
+
+void loop()
+{
+  qtr.readLineBlack(sensorValues);
+  normalizeSensorValues(sensorValues, SENSOR_COUNT, SENSOR_NOISE_THRESHHOLD);
+
+  for (auto o : sensorValues)
+  {
+    Serial.print(o);
+    Serial.print(" ");
+  }
+
+  delay(50);
+  Serial.println();
+}
 
 void calibrateSensors(uint8_t steps)
 {
@@ -25,46 +62,17 @@ void calibrateSensors(uint8_t steps)
   Serial.println("\nCalibration Finished!");
 }
 
-void setup()
+void normalizeSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize, uint16_t noiseThreshhold)
 {
-  Serial.begin(9600);
-
-  // motor setup
-  motorPair.initMotors();
-
-  // sensor setup
-  qtr.setTypeRC(); // digital
-  qtr.setSensorPins(SENSOR_PINS, SENSOR_COUNT);
-  qtr.setEmitterPin(IR_PIN);
-  // calibrateSensors(150);
-
-  // other stuff
-}
-
-void loop()
-{
-  qtr.readLineBlack(sensorValues);
-
-  for (auto &s : sensorValues)
+  for (auto i = 0; i < sensorValuesSize; i++)
   {
-    if (s < SENSOR_THRESHHOLD)
+    if (sensorValues[i] <= noiseThreshhold)
     {
-      s = 0;
-      continue;
+      sensorValues[i] = 0;
     }
-
-    if (s > SENSOR_THRESHHOLD)
+    else
     {
-      s = 1;
+      sensorValues[i] = 1;
     }
   }
-
-  for (auto o : sensorValues)
-  {
-    Serial.print(o);
-    Serial.print(" ");
-  }
-
-  delay(50);
-  Serial.println();
 }
