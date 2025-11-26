@@ -13,8 +13,15 @@ private:
     bool _inverted;
 
 public:
-    Motor(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
-        : _pwm(pwm), _in1(pin1), _in2(pin2), _inverted(inverted) {}
+    Motor() {};
+
+    inline void setMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
+    {
+        _pwm = pwm;
+        _in1 = pin1;
+        _in2 = pin2;
+        _inverted = inverted;
+    }
 
     inline void motorInit()
     {

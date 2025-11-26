@@ -7,15 +7,15 @@
 // sensor declarations
 QTRSensors qtr;
 uint16_t sensorValues[SENSOR_COUNT];
+uint16_t SENSOR_NOISE_THRESHHOLD = 300;
 
 // motor declaration
 MotorPair motors;
 
-// other vars
-uint16_t SENSOR_NOISE_THRESHHOLD = 300;
-
+// function definitions
 void calibrateSensors(uint8_t steps);
 void normalizeSensorValues(uint16_t *sensorValues, uint8_t size, uint16_t noiseThreshhold);
+void printSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize);
 
 void setup()
 {
@@ -30,24 +30,33 @@ void setup()
   qtr.setTypeRC(); // digital
   qtr.setSensorPins(SENSOR_PINS, SENSOR_COUNT);
   qtr.setEmitterPin(IR_PIN);
-  // calibrateSensors(150);
+  calibrateSensors(100);
 
   // other stuff
+  Serial.println("Running motors");
 }
 
 void loop()
 {
   qtr.readLineBlack(sensorValues);
   normalizeSensorValues(sensorValues, SENSOR_COUNT, SENSOR_NOISE_THRESHHOLD);
+  // printSensorValues(sensorValues, SENSOR_COUNT);
+  // Serial.println();
 
-  for (auto o : sensorValues)
-  {
-    Serial.print(o);
-    Serial.print(" ");
-  }
+  // spin?
+  // motors.forward(150);
+  // delay(1000);
 
-  delay(50);
-  Serial.println();
+  // motors.backward(150);
+  // delay(1000);
+
+  motors.getLeftMotor().forward(180);
+  motors.getRightMotor().backward(180);
+  delay(1500);
+
+  motors.getLeftMotor().backward(180);
+  motors.getRightMotor().forward(180);
+  delay(1000);
 }
 
 void calibrateSensors(uint8_t steps)
@@ -60,6 +69,7 @@ void calibrateSensors(uint8_t steps)
     Serial.print(".");
   }
   Serial.println("\nCalibration Finished!");
+  motors.forward(150);
 }
 
 void normalizeSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize, uint16_t noiseThreshhold)
@@ -74,5 +84,14 @@ void normalizeSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize, uin
     {
       sensorValues[i] = 1;
     }
+  }
+}
+
+void printSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize)
+{
+  for (auto i = 0; i < sensorValuesSize; i++)
+  {
+    Serial.print(sensorValues[i]);
+    Serial.print(" ");
   }
 }
