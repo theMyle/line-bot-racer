@@ -20,6 +20,6 @@ constexpr uint8_t STBY_PIN = 19;  // A5 (pin 19) -> STBY on TB6612
 constexpr uint8_t SENSOR_COUNT = 8;
 // D2, D3, D4, A0, A1, A2, A3, A4 = pins 2, 3, 4, 14, 15, 16, 17, 18
 constexpr uint8_t SENSOR_PINS[SENSOR_COUNT] = {2, 3, 4, 14, 15, 16, 17, 18};
-constexpr uint8_t IR_PIN = 12;  // Changed from 10 to avoid conflict with BIN1
+constexpr uint8_t IR_PIN = 12;  
 
 #endif
