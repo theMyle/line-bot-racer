@@ -14,19 +14,19 @@ private:
 
 public:
     // Constructor
-    MotorPair();
+    MotorPair() {};
 
-    // SETTERS
+    // sets and initializes motor pins
     inline void setLeftMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
     {
-        leftMotor = Motor(pwm, pin1, pin2, inverted);
-        left().motorInit();
+        leftMotor.setMotorPins(pwm, pin1, pin2, inverted);
+        leftMotor.motorInit();
     }
 
     inline void setRightMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
     {
-        rightMotor = Motor(pwm, pin1, pin2, inverted);
-        getRightMotor().motorInit();
+        rightMotor.setMotorPins(pwm, pin1, pin2, inverted);
+        rightMotor.motorInit();
     }
 
     inline void setSTBYPin(uint8_t stby)
@@ -40,13 +40,9 @@ public:
 
     /// @brief returns a reference to internal left motor.
     /// @return
-    inline Motor &left() { return leftMotor; }
+    inline Motor &getLeftMotor() { return leftMotor; }
 
     /// @brief returns a reference to internal right motor.
-    /// @return
-    inline Motor &right() { return rightMotor; }
-    
-    /// @brief returns a reference to internal right motor (deprecated, use right() instead).
     /// @return
     inline Motor &getRightMotor() { return rightMotor; }
 

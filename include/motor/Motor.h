@@ -13,23 +13,14 @@ private:
     bool _inverted;
 
 public:
-    // Default constructor for member initialization
-    Motor() : _pwm(0), _in1(0), _in2(0), _inverted(false) {}
+    Motor() {};
 
-    // Parameterized constructor
-    Motor(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
-        : _pwm(pwm), _in1(pin1), _in2(pin2), _inverted(inverted) {}
-
-    // Copy assignment operator to allow motor reassignment
-    Motor& operator=(const Motor& other)
+    inline void setMotorPins(uint8_t pwm, uint8_t pin1, uint8_t pin2, bool inverted)
     {
-        if (this != &other) {
-            _pwm = other._pwm;
-            _in1 = other._in1;
-            _in2 = other._in2;
-            _inverted = other._inverted;
-        }
-        return *this;
+        _pwm = pwm;
+        _in1 = pin1;
+        _in2 = pin2;
+        _inverted = inverted;
     }
 
     inline void motorInit()
