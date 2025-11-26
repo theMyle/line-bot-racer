@@ -14,38 +14,34 @@ MotorPair motors;
 // ============================================================================
 // PID TUNING CONSTANTS
 // ============================================================================
-const float Kp = 0.08;      // Proportional - correction strength
-const float Kd = 1.5;       // Derivative - dampens oscillation
+const float Kp = 8;         // Proportional - correction strength
+const float Kd = 100;       // Derivative - dampens oscillation
 const float Ki = 0.0;       // Integral - disabled (causes lag on sharp turns)
 
 // ============================================================================
 // SPEED SETTINGS
 // ============================================================================
-const int BASE_SPEED       = 120;   // Normal following speed
+const int BASE_SPEED       = 255;   // Normal following speed
 const int MAX_SPEED        = 255;   // Maximum motor speed
-const int SHARP_TURN_SPEED = 200;   // Speed for 90° turns
-const int SEARCH_SPEED     = 150;   // Speed when searching for line
+const int TURN_SPEED       = 150;   // Speed for 90° turns
 
 // ============================================================================
 // DETECTION THRESHOLDS
 // ============================================================================
-const int TURN_THRESHOLD   = 2500;  // Error threshold for sharp turn
 const int LINE_THRESHOLD   = 500;   // Sensor value to detect black line
-const int WHITE_THRESHOLD  = 500;   // Total sensor sum for "all white"
-const int BLACK_COUNT      = 7;     // Sensors needed to detect cross/wide line
 
 // ============================================================================
 // TIMING SETTINGS
 // ============================================================================
-const unsigned long MAX_SEARCH_TIME = 500;  // Max search time (ms)
+const int DELAY_BEFORE_TURN = 100;  // Delay before executing turn (ms)
+const int FORWARD_DIST_CM   = 5;    // Distance to move at intersection
+const int TIME_PER_CM       = 17;   // Time to move 1cm at base speed (calibrate!)
 
 // ============================================================================
 // STATE VARIABLES
 // ============================================================================
 int lastError = 0;
-float integral = 0;
 int lastDirection = 1;              // 1 = right, -1 = left (default: RIGHT)
-unsigned long lineLostTime = 0;
 
 // ============================================================================
 // FUNCTION DECLARATIONS
@@ -53,7 +49,12 @@ unsigned long lineLostTime = 0;
 void calibrateSensors(uint8_t steps);
 void followLine();
 void setMotors(int left, int right);
-void printDebug(const char* mode, uint16_t pos, int err, int left, int right);
+void stopMotors();
+uint8_t readSensorBits();
+void turnRight();
+void turnLeft();
+void moveForward(int distanceCm);
+void printDebug(const char* mode, uint8_t bits, int err, int left, int right);
 
 // ============================================================================
 // SETUP
@@ -133,124 +134,200 @@ void followLine()
 {
   // Read sensor position (0-7000, center = 3500)
   uint16_t position = qtr.readLineBlack(sensorValues);
-  int error = position - 3500;
-  int absError = abs(error);
   
-  // Analyze sensor readings
-  int sensorsOnLine = 0;
-  int sensorSum = 0;
-  for (uint8_t i = 0; i < SENSOR_COUNT; i++)
-  {
-    sensorSum += sensorValues[i];
-    if (sensorValues[i] > LINE_THRESHOLD) sensorsOnLine++;
+  // Convert to bit pattern for turn detection
+  uint8_t bitSensor = readSensorBits();
+  
+  // Calculate error and PID terms
+  float error = 3500 - position;  // Positive = line is left, negative = line is right
+  int derivative = error - lastError;
+  
+  // Detect turn direction using simple bit checks
+  // Left 4 sensors = bits 7-4, Right 4 sensors = bits 3-0
+  uint8_t leftSide = bitSensor >> 4;    // Upper 4 bits
+  uint8_t rightSide = bitSensor & 0x0F; // Lower 4 bits
+  
+  // If left side has more sensors on, it's a left turn
+  // If right side has more sensors on, it's a right turn
+  if (leftSide >= 0x0E && rightSide <= 0x01) {
+    lastDirection = -1;  // Left turn detected
+  } else if (rightSide >= 0x0E && leftSide <= 0x01) {
+    lastDirection = 1;   // Right turn detected
   }
-  
-  bool allWhite = (sensorSum < WHITE_THRESHOLD);
-  bool allBlack = (sensorsOnLine >= BLACK_COUNT);
   
   int leftSpeed, rightSpeed;
   const char* mode;
   
   // ------------------------------------------
-  // CASE 1: Line lost - search (default RIGHT)
+  // CASE 1: All white - execute turn
   // ------------------------------------------
-  if (allWhite)
+  if (bitSensor == 0)
   {
-    if (lineLostTime == 0) lineLostTime = millis();
+    // Line lost - execute turn in last known direction
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(DELAY_BEFORE_TURN);
     
-    unsigned long searchTime = millis() - lineLostTime;
+    if (lastDirection > 0) {
+      turnRight();
+      mode = "TURN-R";
+    } else {
+      turnLeft();
+      mode = "TURN-L";
+    }
     
-    if (searchTime < MAX_SEARCH_TIME)
-    {
-      // Turn in last known direction (default: RIGHT)
-      if (lastDirection > 0) {
-        leftSpeed = SEARCH_SPEED;
-        rightSpeed = SEARCH_SPEED / 3;
-      } else {
-        leftSpeed = SEARCH_SPEED / 3;
-        rightSpeed = SEARCH_SPEED;
-      }
-    }
-    else
-    {
-      // Timeout - go straight slowly
-      leftSpeed = BASE_SPEED / 2;
-      rightSpeed = BASE_SPEED / 2;
-    }
-    mode = "SEARCH";
+    digitalWrite(LED_BUILTIN, LOW);
+    lastError = 0;
+    return;  // Exit early, turn handles its own motor control
   }
   // ------------------------------------------
-  // CASE 2: Cross/intersection - go straight
+  // CASE 2: All black - intersection handling
   // ------------------------------------------
-  else if (allBlack)
+  else if (bitSensor == 0xFF)
   {
+    digitalWrite(LED_BUILTIN, HIGH);
+    
+    // Move forward to clear the intersection
+    moveForward(FORWARD_DIST_CM);
+    
+    // Read sensors again to determine what's ahead
+    qtr.readLineBlack(sensorValues);
+    bitSensor = readSensorBits();
+    
+    // Check if still all black (stop point)
+    while (bitSensor == 0xFF)
+    {
+      stopMotors();
+      qtr.readLineBlack(sensorValues);
+      bitSensor = readSensorBits();
+    }
+    
+    // Determine action based on what we see
+    if (bitSensor == 0) {
+      // T-intersection: no line ahead, turn right (default)
+      lastDirection = 1;
+    } else {
+      // Cross intersection: line continues, go straight
+      lastDirection = 0;  // Will use PID
+    }
+    
+    digitalWrite(LED_BUILTIN, LOW);
+    mode = "CROSS";
     leftSpeed = BASE_SPEED;
     rightSpeed = BASE_SPEED;
-    lineLostTime = 0;
-    mode = "CROSS";
   }
   // ------------------------------------------
-  // CASE 3: Sharp turn (90°)
-  // ------------------------------------------
-  else if (absError > TURN_THRESHOLD)
-  {
-    lastDirection = (error > 0) ? 1 : -1;
-    
-    if (error > 0) {
-      leftSpeed = SHARP_TURN_SPEED;
-      rightSpeed = 0;
-    } else {
-      leftSpeed = 0;
-      rightSpeed = SHARP_TURN_SPEED;
-    }
-    
-    integral = 0;
-    lineLostTime = 0;
-    mode = "SHARP";
-  }
-  // ------------------------------------------
-  // CASE 4: Normal PID following
+  // CASE 3: Normal PID following
   // ------------------------------------------
   else
   {
-    // Remember direction for recovery
-    if (absError > 500) lastDirection = (error > 0) ? 1 : -1;
-    
     // PID calculation
-    integral = constrain(integral + error, -5000, 5000);
-    int derivative = error - lastError;
-    float correction = (Kp * error) + (Ki * integral) + (Kd * derivative);
+    float correction = (Kp * error) + (Kd * derivative);
     
-    leftSpeed = constrain(BASE_SPEED - correction, 0, MAX_SPEED);
-    rightSpeed = constrain(BASE_SPEED + correction, 0, MAX_SPEED);
+    // Note: error positive = line is left, so right motor needs more speed
+    leftSpeed = constrain(BASE_SPEED + correction, -MAX_SPEED, MAX_SPEED);
+    rightSpeed = constrain(BASE_SPEED - correction, -MAX_SPEED, MAX_SPEED);
     
-    lineLostTime = 0;
     mode = "PID";
   }
   
   lastError = error;
   
-  // Apply motor speeds
-  setMotors(leftSpeed, rightSpeed);
+  // Apply motor speeds (handle reverse)
+  if (leftSpeed >= 0) {
+    motors.left().forward(leftSpeed);
+  } else {
+    motors.left().backward(-leftSpeed);
+  }
+  
+  if (rightSpeed >= 0) {
+    motors.right().forward(rightSpeed);
+  } else {
+    motors.right().backward(-rightSpeed);
+  }
   
   // Debug output
-  printDebug(mode, position, error, leftSpeed, rightSpeed);
+  printDebug(mode, bitSensor, (int)error, leftSpeed, rightSpeed);
 }
 
 // ============================================================================
-// HELPER FUNCTIONS
+// SENSOR READING - Convert to bit pattern
 // ============================================================================
+uint8_t readSensorBits()
+{
+  uint8_t bits = 0;
+  for (uint8_t i = 0; i < SENSOR_COUNT; i++)
+  {
+    if (sensorValues[i] > LINE_THRESHOLD) {
+      bits |= (1 << (7 - i));  // MSB = leftmost sensor
+    }
+  }
+  return bits;
+}
+
+// ============================================================================
+// TURN FUNCTIONS
+// ============================================================================
+void turnRight()
+{
+  // Turn right until center sensor (sensor 3 or 4) detects line
+  qtr.readLineBlack(sensorValues);
+  while (sensorValues[4] < LINE_THRESHOLD)
+  {
+    motors.left().forward(TURN_SPEED);
+    motors.right().backward(TURN_SPEED);
+    qtr.readLineBlack(sensorValues);
+  }
+  lastDirection = 1;
+}
+
+void turnLeft()
+{
+  // Turn left until center sensor detects line
+  qtr.readLineBlack(sensorValues);
+  while (sensorValues[3] < LINE_THRESHOLD)
+  {
+    motors.left().backward(TURN_SPEED);
+    motors.right().forward(TURN_SPEED);
+    qtr.readLineBlack(sensorValues);
+  }
+  lastDirection = -1;
+}
+
+// ============================================================================
+// MOVEMENT FUNCTIONS
+// ============================================================================
+void moveForward(int distanceCm)
+{
+  unsigned long moveTime = distanceCm * TIME_PER_CM;
+  unsigned long startTime = millis();
+  
+  while (millis() - startTime < moveTime)
+  {
+    motors.left().forward(BASE_SPEED);
+    motors.right().forward(BASE_SPEED);
+  }
+}
+
+void stopMotors()
+{
+  motors.left().forward(0);
+  motors.right().forward(0);
+}
+
 void setMotors(int left, int right)
 {
   motors.left().forward(left);
   motors.right().forward(right);
 }
 
-void printDebug(const char* mode, uint16_t pos, int err, int left, int right)
+void printDebug(const char* mode, uint8_t bits, int err, int left, int right)
 {
   Serial.print(mode);
-  Serial.print(F(" P:"));
-  Serial.print(pos);
+  Serial.print(F(" B:"));
+  // Print binary
+  for (int i = 7; i >= 0; i--) {
+    Serial.print(bitRead(bits, i));
+  }
   Serial.print(F(" E:"));
   Serial.print(err);
   Serial.print(F(" L:"));
