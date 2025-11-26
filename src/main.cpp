@@ -245,20 +245,20 @@ void followLine()
   // Apply motor speeds (handle reverse)
   if (leftSpeed >= 0)
   {
-    motors.left().forward(leftSpeed);
+    motors.getLeftMotor().forward(leftSpeed);
   }
   else
   {
-    motors.left().backward(-leftSpeed);
+    motors.getLeftMotor().backward(-leftSpeed);
   }
 
   if (rightSpeed >= 0)
   {
-    motors.right().forward(rightSpeed);
+    motors.getRightMotor().forward(rightSpeed);
   }
   else
   {
-    motors.right().backward(-rightSpeed);
+    motors.getRightMotor().backward(-rightSpeed);
   }
 
   // Debug output
@@ -290,8 +290,8 @@ void turnRight()
   qtr.readLineBlack(sensorValues);
   while (sensorValues[4] < LINE_THRESHOLD)
   {
-    motors.left().forward(TURN_SPEED);
-    motors.right().backward(TURN_SPEED);
+    motors.getLeftMotor().forward(TURN_SPEED);
+    motors.getRightMotor().backward(TURN_SPEED);
     qtr.readLineBlack(sensorValues);
   }
   lastDirection = 1;
@@ -303,8 +303,8 @@ void turnLeft()
   qtr.readLineBlack(sensorValues);
   while (sensorValues[3] < LINE_THRESHOLD)
   {
-    motors.left().backward(TURN_SPEED);
-    motors.right().forward(TURN_SPEED);
+    motors.getLeftMotor().backward(TURN_SPEED);
+    motors.getRightMotor().forward(TURN_SPEED);
     qtr.readLineBlack(sensorValues);
   }
   lastDirection = -1;
@@ -320,21 +320,20 @@ void moveForward(int distanceCm)
 
   while (millis() - startTime < moveTime)
   {
-    motors.left().forward(BASE_SPEED);
-    motors.right().forward(BASE_SPEED);
+    motors.getLeftMotor().forward(BASE_SPEED);
+    motors.getRightMotor().forward(BASE_SPEED);
   }
 }
 
 void stopMotors()
 {
-  motors.left().forward(0);
-  motors.right().forward(0);
+  motors.stop();
 }
 
 void setMotors(int left, int right)
 {
-  motors.left().forward(left);
-  motors.right().forward(right);
+  motors.getLeftMotor().forward(left);
+  motors.getRightMotor().forward(right);
 }
 
 void printDebug(const char *mode, uint8_t bits, int err, int left, int right)
