@@ -16,7 +16,8 @@ constexpr uint8_t STBY_PIN = A5;
 
 // --- SENSOR PINS ---
 constexpr uint8_t SENSOR_COUNT = 8;
-constexpr uint8_t SENSOR_PINS[SENSOR_COUNT] = {2, 3, 4, A0, A1, A2, A3, A4};
+constexpr uint8_t SENSOR_PINS[SENSOR_COUNT] = {A4, A3, A2, A1, A0, 4, 3, 2};
+constexpr int8_t SENSOR_BIAS[SENSOR_COUNT] = {-3, -2, -1, 0, 0, 1, 2, 3};
 constexpr uint8_t IR_PIN = 10;
 
 #endif
