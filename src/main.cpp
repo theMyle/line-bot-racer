@@ -7,15 +7,26 @@
 // sensor declarations
 QTRSensors qtr;
 uint16_t sensorValues[SENSOR_COUNT];
-uint16_t SENSOR_NOISE_THRESHHOLD = 300;
+uint16_t SENSOR_NOISE_THRESHHOLD = 500;
 
 // motor declaration
 MotorPair motors;
+
+const float Kp = 18.0f; // 0.15
+const float Ki = 0.0f;
+const float Kd = 0.0f; // 1.0
+
+const uint8_t MAX_SPD = 180;
+const uint8_t BASE_SPD = 120;
+
+float leftMotorFloatAccumulator = BASE_SPD;
+float rightMotorFloatAccumulator = BASE_SPD;
 
 // function definitions
 void calibrateSensors(uint8_t steps);
 void normalizeSensorValues(uint16_t *sensorValues, uint8_t size, uint16_t noiseThreshhold);
 void printSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize);
+float calculateErrorDigital(uint16_t *sensorValues, const int8_t *sensorBias, uint8_t size);
 
 void setup()
 {
@@ -40,23 +51,29 @@ void loop()
 {
   qtr.readLineBlack(sensorValues);
   normalizeSensorValues(sensorValues, SENSOR_COUNT, SENSOR_NOISE_THRESHHOLD);
-  // printSensorValues(sensorValues, SENSOR_COUNT);
-  // Serial.println();
 
-  // spin?
-  // motors.forward(150);
-  // delay(1000);
+  // calculate error
+  float error = calculateErrorDigital(sensorValues, SENSOR_BIAS, SENSOR_COUNT);
 
-  // motors.backward(150);
-  // delay(1000);
+  // calculate PID
 
-  motors.getLeftMotor().forward(180);
-  motors.getRightMotor().backward(180);
-  delay(1500);
+  // Proportional
+  float P = Kp * error;
 
-  motors.getLeftMotor().backward(180);
-  motors.getRightMotor().forward(180);
-  delay(1000);
+  // Derivative
+  float D = 0.0f;
+
+  float pidOutput = P + D;
+
+  int leftSpeed = (int)(BASE_SPD - pidOutput);
+  int rightSpeed = (int)(BASE_SPD + pidOutput);
+
+  leftSpeed = constrain(leftSpeed, 0, MAX_SPD);
+  rightSpeed = constrain(rightSpeed, 0, MAX_SPD);
+
+  // drive motors
+  motors.getLeftMotor().forward(leftSpeed);
+  motors.getRightMotor().forward(rightSpeed);
 }
 
 void calibrateSensors(uint8_t steps)
@@ -94,4 +111,26 @@ void printSensorValues(uint16_t *sensorValues, uint8_t sensorValuesSize)
     Serial.print(sensorValues[i]);
     Serial.print(" ");
   }
+
+  Serial.println("");
+}
+
+float calculateErrorDigital(uint16_t *sensorValues, const int8_t *sensorBias, uint8_t size)
+{
+  int weightedSum = 0;
+  int total = 0;
+
+  for (int i = 0; i < size; i++)
+  {
+    if (sensorValues[i])
+    {
+      weightedSum += sensorBias[i];
+      total++;
+    }
+  }
+
+  if (total == 0)
+    return 0;
+
+  return (float)weightedSum / total;
 }
